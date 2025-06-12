@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAITIK.terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-8">
+    <!-- Utility Buttons -->
+    <div class="fixed bottom-4 right-4 z-50 flex space-x-2">
+        <button id="browser-toggle" class="p-3 rounded-full btn btn-primary shadow-lg" title="Open Browser">
+            <i class="fas fa-globe text-white"></i>
+        </button>
+        <button id="calc-btn" class="p-3 rounded-full btn btn-primary shadow-lg ml-2" title="Calculator">
+            <i class="fas fa-calculator text-white"></i>
+        </button>
+    </div>
+
+    <!-- Browser Modal -->
+    <div id="browser-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden z-50 flex flex-col p-2">
+        <div class="flex justify-between items-center bg-gray-900 p-2">
+            <div class="flex items-center space-x-2">
+                <button id="browser-back" class="p-2 text-gray-400 hover:text-white disabled:opacity-30" title="Back" disabled>
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="browser-forward" class="p-2 text-gray-400 hover:text-white disabled:opacity-30" title="Forward" disabled>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <button id="browser-refresh" class="p-2 text-gray-400 hover:text-white" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="browser-home" class="p-2 text-gray-400 hover:text-white" title="Home">
+                    <i class="fas fa-home"></i>
+                </button>
+            </div>
+            <input type="text" id="browser-url" class="flex-1 mx-2 p-2 bg-gray-800 text-white rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Enter URL (e.g. https://example.com)">
+            <button id="close-browser" class="p-2 text-gray-400 hover:text-white" title="Close Browser">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="relative flex-1">
+            <div id="browser-loading" class="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x text-purple-400 mb-2"></i>
+                    <div class="text-gray-300">Loading page...</div>
+                </div>
+            </div>
+            <iframe id="browser-frame" class="absolute inset-0 w-full h-full border-0" 
+                     sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
+                    allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <!-- Main Terminal Container -->
+    <div class="flex-1 rounded-xl overflow-hidden glass-effect flex flex-col">
+        <!-- Terminal Header -->
+        <div class="bg-gradient-to-r from-purple-900 to-indigo-900 p-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 cursor-pointer" title="Close"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-400 hover:bg-yellow-300 cursor-pointer" title="Minimize"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 cursor-pointer" title="Maximize"></div>
+            </div>
+            <div class="text-sm font-bold glow">NAITIK.terminal</div>
+            <div class="text-xs opacity-70">v2.0</div>
+        </div>
+
+        <!-- Terminal Body -->
+        <div class="flex-1 bg-gray-900/60 p-4 md:p-6 overflow-y-auto">
+            <!-- NPM Installation Animation -->
+            <div id="npm-installation" class="mb-6 space-y-1">
+                <div class="text-purple-400 font-mono">> naitik-portfolio@2.0.0 install</div>
+                <div class="text-gray-400 font-mono">> Initializing terminal environment</div>
+                <div class="progress-bar my-2"></div>
+                <div id="npm-log" class="text-xs font-mono space-y-1 text-gray-300"></div>
+            </div>
+
+            <!-- Welcome Message (Hidden initially) -->
+            <div id="welcome-message" class="mb-6 hidden">
+                <div class="typewriter text-xl font-bold text-purple-400 mb-2">Welcome to Naitik's Interactive Portfolio Terminal</div>
+                <div class="text-gray-400 mb-4">Type <span class="command" onclick="handleCommand('help')">"help"</span> to see available commands</div>
+            </div>
+
+            <!-- Command History -->
+            <div id="command-history" class="space-y-4"></div>
+
+            <!-- Input Section (Hidden initially) -->
+            <div id="terminal-input-section" class="mt-4 flex items-start hidden">
+                <span class="text-purple-400 mr-2">~</span>
+                <div class="flex-1 flex items-center">
+                    <input type="text" id="terminal-input"
+                           class="terminal-input bg-transparent border-none outline-none flex-1 text-gray-100"
+                           autocomplete="off" autocorrect="off" spellcheck="false"
+                           placeholder="Type a command...">
+                    <span id="cursor" class="cursor">_</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Viewer Modal -->
+    <div id="project-viewer" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-900 rounded-lg w-full max-w-4xl h-3/4 flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 p-4">
+                <h3 class="text-xl font-mono" id="project-title">Project Demo</h3>
+                <div>
+                    <button id="fullscreen-btn" class="mr-2 text-gray-400 hover:text-white" title="Fullscreen">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button id="close-viewer" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 relative">
+                <div class="absolute inset-0 bg-gray-800 flex items-center justify-center">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-3x text-purple-400 mb-2"></i>
+                        <div class="text-gray-400">Loading project...</div>
+                    </div>
+                </div>
+                <iframe id="project-frame" class="absolute inset-0 w-full h-full border-0" 
+                        allowfullscreen></iframe>
+            </div>
+            <div class="border-t border-gray-800 p-3 text-xs text-gray-500">
+                <div class="flex justify-between items-center">
+                    <div id="project-url"></div>
+                    <button id="open-new-btn" class="text-purple-400 hover:text-purple-300">
+                        <i class="fas fa-external-link-alt mr-1"></i>Open in new tab
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
+    <div id="email-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 border border-purple-700 rounded-lg w-full max-w-md p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-purple-400">Contact Naitik</h3>
+                <button id="close-modal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="sender-name" class="block text-sm font-medium text-gray-400 mb-1">Your Name</label>
+                    <input type="text" id="sender-name" class="w-full bg-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+                </div>
+                
+                <div>
+                    <label for="sender-email" class="block text-sm font-medium text-gray-400 mb-1">Your Email</label>
+                    <input type="email" id="sender-email" class="w-full bg-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+                </div>
+                
+                <div>
+                    <label for="message-content" class="block text-sm font-medium text-gray-400 mb-1">Message</label>
+                    <textarea id="message-content" rows="5" class="w-full bg-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-600"></textarea>
+                </div>
+                
+                <button id="send-message" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2 px-4 rounded transition font-medium flex items-center justify-center">
+                    <span id="send-text">Send Message</span>
+                    <span id="sending-text" class="hidden items-center">
+                        Sending... <i class="fas fa-spinner fa-spin ml-2"></i>
+                    </span>
+                </button>
+                
+                <div id="status-message" class="hidden text-center text-sm mt-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Sections Content -->
+    <div class="hidden">
+        <!-- Personal Info -->
+        <div id="personal-info-content" class="section-content grid md:grid-cols-2 gap-4 p-4">
+            <div>
+                <div class="text-purple-400 mb-2 font-mono">// Basic Information</div>
+                <div class="space-y-2">
+                    <div><span class="text-gray-500">Name:</span> Naitik Vishwakarma</div>
+                    <div><span class="text-gray-500">Location:</span> Kanpur, Uttar Pradesh</div>
+                    <div><span class="text-gray-500">Language:</span> English</div>
+                    <div><span class="text-gray-500">Availability:</span> <span class="text-red-400">Unavailable</span> from 7 AM to 7 PM (college hours)</div>
+                </div>
+            </div>
+            <div>
+                <div class="text-purple-400 mb-2 font-mono">// Current Status</div>
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <span class="text-gray-500">Studies:</span> 
+                        <span class="ml-2 px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-xs">
+                            Active @ BCA 2nd Semester
+                        </span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-500">Focus:</span> 
+                        <span class="ml-2 px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-xs">
+                            Web Development
+                        </span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-500">Current Project:</span> 
+                        <span class="ml-2 px-2 py-1 bg-purple-900 bg-opacity-50 rounded text-xs">
+                            SkillSwap Platform
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="md:col-span-2">
+                <div class="text-purple-400 mb-2 font-mono">// Contact Quick Links</div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="https://github.com/NAITIK-builds" target="_blank" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded flex items-center text-sm">
+                        <i class="fab fa-github mr-2"></i> GitHub
+                    </a>
+                    <a href="https://linkedin.com/in/naitik-vishwakarma-9b78b8324" target="_blank" class="px-3 py-1 bg-blue-900 hover:bg-blue-800 rounded flex items-center text-sm">
+                        <i class="fab fa-linkedin mr-2"></i> LinkedIn
+                    </a>
+                    <a href="https://instagram.com/theuttamx" target="_blank" class="px-3 py-1 bg-pink-900 hover:bg-pink-800 rounded flex items-center text-sm">
+                        <i class="fab fa-instagram mr-2"></i> Instagram
+                    </a>
+                    <a href="mailto:naitikwebdev001@gmail.com" class="px-3 py-1 bg-red-900 hover:bg-red-800 rounded flex items-center text-sm">
+                        <i class="fas fa-envelope mr-2"></i> Email
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Education -->
+        <div id="education-content" class="section-content p-4">
+            <div class="border-l-4 border-purple-700 pl-4 mb-4">
+                <div class="text-purple-400 mb-2 font-mono">// Current Education</div>
+                <div class="space-y-4">
+                    <div>
+                        <div class="font-bold">BCA (2nd Semester, 2024–27 session)</div>
+                        <div class="text-gray-400 text-sm">Bachelor of Computer Applications</div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-purple-300 text-sm mb-1">Current Subjects:</div>
+                            <ul class="list-disc list-inside text-gray-300">
+                                <li>Python (Scripting, Automation, Security Tools)</li>
+                                <li>Data Structures & Algorithms (DSA) (For coding interviews & efficient problem-solving)</li>
+                                <li>Mathematics (Cryptography, Discrete Math for Security)</li>
+                                <li>Operating Systems (Linux, Windows Internals, Security Hardening)</li>
+                                <li>Cybersecurity Fundamentals (Networking, Ethical Hacking, Threat Modeling)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-purple-300 text-sm mb-1">Future Goals:</div>
+                            <ul class="list-disc list-inside text-gray-300">
+                                <li>Master Full Stack Development</li>
+                                <li>Learn Cloud Technologies</li>
+                                <li>Contribute to Open Source</li>
+                                <li>Build a strong professional network</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-indigo-700 pl-4">
+                <div class="text-indigo-400 mb-2 font-mono">// Career Aspirations</div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-indigo-300 text-sm mb-1">Short Term Goals:</div>
+                        <ul class="list-disc list-inside text-gray-300">
+                            <li>Master current subjects (OOP in C++)</li>
+                            <li>Complete 2 personal projects</li>
+                            <li>Improve problem-solving skills</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="text-indigo-300 text-sm mb-1">Long Term Vision:</div>
+                        <ul class="list-disc list-inside text-gray-300">
+                            <li>Land a reputable tech job</li>
+                            <li>Earn <span class="text-green-400">20+ LPA</span> salary</li>
+                            <li>Become a skilled full-stack developer</li>
+                            <li>Start own tech venture</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills -->
+        <div id="skills-content" class="section-content p-4">
+            <div class="mb-6">
+                <div class="text-purple-400 mb-2 font-mono">// Technical Skills</div>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="text-lg font-mono text-green-400 mb-2">Web Development</div>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="text-sm text-gray-400">Frontend:</div>
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">HTML</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">CSS</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">JavaScript</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">React</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">Tailwind</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Backend:</div>
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">Node.js</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">Express</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">MongoDB</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Design:</div>
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">Figma</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">Adobe XD</span>
+                                    <span class="px-2 py-1 bg-green-900 bg-opacity-40 rounded text-xs">UI/UX</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-mono text-blue-400 mb-2">Video Editing</div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-2 py-1 bg-blue-900 bg-opacity-40 rounded text-xs">Adobe Premiere Pro</span>
+                            <span class="px-2 py-1 bg-blue-900 bg-opacity-40 rounded text-xs">After Effects</span>
+                            <span class="px-2 py-1 bg-blue-900 bg-opacity-40 rounded text-xs">DaVinci Resolve</span>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-sm text-gray-400">Specializations:</div>
+                            <ul class="list-disc list-inside text-gray-300 mt-1">
+                                <li>Motion Graphics</li>
+                                <li>Color Grading</li>
+                                <li>Transitions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-purple-400 mb-2 font-mono">// Business Ventures</div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="border border-gray-800 rounded p-4 hover:border-purple-700 transition">
+                        <div class="text-yellow-400 font-mono mb-2">Dark-Themed Art</div>
+                        <div class="text-gray-300 text-sm">
+                            Handmade art with dark aesthetics for sale online. Focus on unique designs and limited editions.
+                        </div>
+                    </div>
+                    <div class="border border-gray-800 rounded p-4 hover:border-blue-700 transition">
+                        <div class="text-blue-400 font-mono mb-2">Video Editing Services</div>
+                        <div class="text-gray-300 text-sm">
+                            Professional editing for content creators, YouTubers, and businesses with quick turnaround.
+                        </div>
+                    </div>
+                    <div class="border border-gray-800 rounded p-4 hover:border-green-700 transition">
+                        <div class="text-green-400 font-mono mb-2">Gaming ID Platform</div>
+                        <div class="text-gray-300 text-sm">
+                            Marketplace for selling premium gaming accounts (Free Fire, BGMI) with secure transactions.
+                        </div>
+                    </div>
+                    <div class="border border-gray-800 rounded p-4 hover:border-red-700 transition">
+                        <div class="text-red-400 font-mono mb-2">Mobile Shop Website</div>
+                        <div class="text-gray-300 text-sm">
+                            E-commerce platform for mobile accessories with inventory management and payment integration.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects -->
+        <div id="projects-content" class="section-content p-4">
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- SkillSwap -->
+                <div class="border-l-4 border-purple-600 pl-4">
+                    <div class="text-purple-400 font-mono text-lg mb-2">SkillSwap</div>
+                    <div class="text-gray-400 text-sm mb-3">
+                        Platform for non-monetary skill exchange between individuals
+                    </div>
+                    <div class="text-gray-300 mb-3">
+                        Features:
+                        <ul class="list-disc list-inside ml-4 mt-1">
+                            <li>Landing page with value proposition</li>
+                            <li>Authentication system (login/signup)</li>
+                            <li>Dashboard with skill match cards</li>
+                            <li>User profile management</li>
+                            <li>Dark mode toggle</li>
+                            <li>Responsive design</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 mb-1">Tech Stack:</div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="px-2 py-0.5 bg-purple-900 bg-opacity-40 rounded text-xs">React</span>
+                            <span class="px-2 py-0.5 bg-purple-900 bg-opacity-40 rounded text-xs">Node.js</span>
+                            <span class="px-2 py-0.5 bg-purple-900 bg-opacity-40 rounded text-xs">MongoDB</span>
+                            <span class="px-2 py-0.5 bg-purple-900 bg-opacity-40 rounded text-xs">Tailwind</span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-xs text-gray-500 mb-1">Design Theme:</div>
+                        <div class="text-sm text-gray-300">
+                            Modern UI with blue-purple gradients, Poppins font, flat icons
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button class="demo-btn px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs"
+                                 data-project="skillswap">
+                            <i class="fas fa-play mr-1"></i> Live Demo
+                        </button>
+                        <button class="repo-btn px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                 data-project="skillswap">
+                            <i class="fab fa-github mr-1"></i> Repository
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Personal Productivity Tracker -->
+                <div class="border-l-4 border-blue-600 pl-4">
+                    <div class="text-blue-400 font-mono text-lg mb-2">Productivity Tracker</div>
+                    <div class="text-gray-400 text-sm mb-3">
+                        Daily task logging with distraction analysis
+                    </div>
+                    <div class="text-gray-300 mb-3">
+                        Features:
+                        <ul class="list-disc list-inside ml-4 mt-1">
+                            <li>Time-block task logging</li>
+                            <li>Distraction recording</li>
+                            <li>Inactivity reason tracking</li>
+                            <li>Daily/weekly reports</li>
+                            <li>Goal setting</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 mb-1">Tech Stack:</div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="px-2 py-0.5 bg-blue-900 bg-opacity-40 rounded text-xs">JavaScript</span>
+                            <span class="px-2 py-0.5 bg-blue-900 bg-opacity-40 rounded text-xs">LocalStorage</span>
+                            <span class="px-2 py-0.5 bg-blue-900 bg-opacity-40 rounded text-xs">Chart.js</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button class="demo-btn px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-xs"
+                                 data-project="tracker">
+                            <i class="fas fa-play mr-1"></i> Live Demo
+                        </button>
+                        <button class="repo-btn px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                 data-project="tracker">
+                            <i class="fab fa-github mr-1"></i> Repository
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Gaming ID Platform -->
+                <div class="border-l-4 border-green-600 pl-4 mt-6 md:mt-0">
+                    <div class="text-green-400 font-mono text-lg mb-2">Gaming ID Marketplace</div>
+                    <div class="text-gray-400 text-sm mb-3">
+                        Platform for buying/selling premium gaming accounts
+                    </div>
+                    <div class="text-gray-300 mb-3">
+                        Features:
+                        <ul class="list-disc list-inside ml-4 mt-1">
+                            <li>Game account listings</li>
+                            <li>User reviews system</li>
+                            <li>Media attachments (photos/videos)</li>
+                            <li>'Buy' & 'Contact' buttons</li>
+                            <li>'Copy UID' feature</li>
+                            <li>Authentication system</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 mb-1">Tech Stack:</div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="px-2 py-0.5 bg-green-900 bg-opacity-40 rounded text-xs">MERN Stack</span>
+                            <span class="px-2 py-0.5 bg-green-900 bg-opacity-40 rounded text-xs">Razorpay API</span>
+                            <span class="px-2 py-0.5 bg-green-900 bg-opacity-40 rounded text-xs">Cloudinary</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div id="contact-content" class="section-content p-4">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="text-purple-400 mb-4 font-mono">// Let's Connect</div>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="text-2xl text-gray-500 mr-4 mt-1">
+                                <i class="fab fa-github"></i>
+                            </div>
+                            <div>
+                                <div class="font-mono">GitHub</div>
+                                <a href="https://github.com/NAITIK-builds" target="_blank" class="text-sm text-gray-400 hover:text-purple-400 transition">
+                                    github.com/NAITIK-builds
+                                </a>
+                                <div class="text-xs text-gray-500 mt-1">View my code repositories and contributions</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="text-2xl text-gray-500 mr-4 mt-1">
+                                <i class="fab fa-linkedin"></i>
+                            </div>
+                            <div>
+                                <div class="font-mono">LinkedIn</div>
+                                <a href="https://linkedin.com/in/naitik-vishwakarma-9b78b8324" target="_blank" class="text-sm text-gray-400 hover:text-blue-400 transition">
+                                    linkedin.com/in/naitik-vishwakarma
+                                </a>
+                                <div class="text-xs text-gray-500 mt-1">Professional network and experience</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="text-2xl text-gray-500 mr-4 mt-1">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div>
+                                <div class="font-mono">Email</div>
+                                <a href="mailto:naitikwebdev001@gmail.com" class="text-sm text-gray-400 hover:text-red-400 transition">
+                                    naitikwebdev001@gmail.com
+                                </a>
+                                <div class="text-xs text-gray-500 mt-1">For professional inquiries and collaborations</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-purple-400 mb-4 font-mono">// Currently Seeking</div>
+                    <div class="space-y-3">
+                        <div class="border-l-2 border-purple-700 pl-4 py-2 hover:bg-gray-800 transition cursor-default">
+                            <div class="text-yellow-400 font-mono">Internship Opportunities</div>
+                            <div class="text-sm text-gray-300">Summer 2024 in Web Development</div>
+                        </div>
+                        <div class="border-l-2 border-blue-700 pl-4 py-2 hover:bg-gray-800 transition cursor-default">
+                            <div class="text-blue-400 font-mono">Project Collaborations</div>
+                            <div class="text-sm text-gray-300">Open to working on interesting side projects</div>
+                        </div>
+                        <div class="border-l-2 border-green-700 pl-4 py-2 hover:bg-gray-800 transition cursor-default">
+                            <div class="text-green-400 font-mono">Mentorship</div>
+                            <div class="text-sm text-gray-300">Looking to learn from experienced developers</div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <div class="text-xs text-gray-500 mb-2">Preferred contact method is email</div>
+                        <div class="text-xs text-gray-600">Response time: Within 2 business days (excluding college hours)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help -->
+        <div id="help-content" class="section-content p-4 font-mono">
+            <div class="text-purple-400 mb-4">Available Commands:</div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="space-y-3">
+                    <div>
+                        <span class="command" onclick="handleCommand('personal')">"personal"</span> 
+                        <span class="text-gray-400">- Show personal information</span>
+                    </div>
+                    <div>
+                        <span class="command" onclick="handleCommand('education')">"education"</span> 
+                        <span class="text-gray-400">- View education details</span>
+                    </div>
+                    <div>
+                        <span class="command" onclick="handleCommand('skills')">"skills"</span> 
+                        <span class="text-gray-400">- Display technical skills</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <span class="command" onclick="handleCommand('projects')">"projects"</span> 
+                        <span class="text-gray-400">- List completed projects</span>
+                    </div>
+                    <div>
+                        <span class="command" onclick="handleCommand('contact')">"contact"</span> 
+                        <span class="text-gray-400">- Get contact information</span>
+                    </div>
+                    <div>
+                        <span class="command" onclick="handleCommand('sendmail')">"sendmail"</span> 
+                        <span class="text-gray-400">- Directly send an email</span>
+                    </div>
+                    <div>
+                        <span class="command" onclick="handleCommand('clear')">"clear"</span> 
+                        <span class="text-gray-400">- Clear terminal history</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 text-sm text-gray-400">
+                Tip: You can click on any command in green to execute it
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
